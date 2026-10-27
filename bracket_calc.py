@@ -35,9 +35,7 @@ def factor_of_safety(yield_strength, stress):
     return yield_strength / stress
 
 
-def analyze(P, L, b, h, E, yield_strength):
-    """Run the full calculation and return the results in a dictionary."""
-    stress = bending_stress(P, L, b, h)
+de, b, h)
     return {
         "I": moment_of_inertia(b, h),
         "M": max_moment(P, L),
