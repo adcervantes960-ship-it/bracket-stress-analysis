@@ -5,7 +5,6 @@ Assumptions: linear elastic, small deflection (Euler-Bernoulli), point load at t
 free end, rigid fixed end, constant rectangular cross-section, no stress concentrations.
 """
 
-
 def moment_of_inertia(b, h):
     """Second moment of area of a rectangle about its neutral axis (m^4)."""
     return b * h ** 3 / 12.0
@@ -35,14 +34,18 @@ def factor_of_safety(yield_strength, stress):
     return yield_strength / stress
 
 
-def analyze(P, L, b, h, E, yield_strength):
-    """Run the full calculation and return the results in a dictionary."""
-    stress = bending_stress(P, L, b, h)
+def analyze(P, L, b, h, E, yield_strength, dynamic_factor=1.0):
+    """Run the full calculation with an optional dynamic load factor and return results."""
+    effective_P = P * dynamic_factor
+    stress = bending_stress(effective_P, L, b, h)
     return {
+        "P_applied": P,
+        "dynamic_factor": dynamic_factor,
+        "effective_P": effective_P,
         "I": moment_of_inertia(b, h),
-        "M": max_moment(P, L),
+        "M": max_moment(effective_P, L),
         "stress": stress,
-        "deflection": tip_deflection(P, L, E, b, h),
+        "deflection": tip_deflection(effective_P, L, E, b, h),
         "FOS": factor_of_safety(yield_strength, stress),
     }
 
@@ -56,11 +59,15 @@ if __name__ == "__main__":
     E = 68.9e9            # Young's modulus, Pa
     YIELD = 276e6         # yield strength, Pa
 
-    r = analyze(P, L, b, h, E, YIELD)
+    # Run static baseline
+    r_static = analyze(P, L, b, h, E, YIELD, dynamic_factor=1.0)
+    print("=== Cantilever bracket: Static Baseline ===")
+    print(f"  Max bending stress  : {r_static['stress'] / 1e6:.1f} MPa")
+    print(f"  Factor of safety    : {r_static['FOS']:.2f}")
 
-    print("Cantilever bracket, baseline case (Aluminum 6061-T6)")
-    print(f"  Moment of inertia I : {r['I']:.4e} m^4")
-    print(f"  Max moment M        : {r['M']:.1f} N*m")
-    print(f"  Max bending stress  : {r['stress'] / 1e6:.1f} MPa")
-    print(f"  Factor of safety    : {r['FOS']:.2f}")
-    print(f"  Tip deflection      : {r['deflection'] * 1000:.1f} mm")
+    # Run dynamic loading case (DLF = 1.5)
+    r_dynamic = analyze(P, L, b, h, E, YIELD, dynamic_factor=1.5)
+    print("\n=== Cantilever bracket: Dynamic Loading (DLF = 1.5) ===")
+    print(f"  Effective Load      : {r_dynamic['effective_P']:.1f} N")
+    print(f"  Max bending stress  : {r_dynamic['stress'] / 1e6:.1f} MPa")
+    print(f"  Factor of safety    : {r_dynamic['FOS']:.2f}")
